@@ -1,0 +1,792 @@
+CURSOR BUILD INSTRUCTION
+Research and Deliverable Harness That Mimics Research-Grade ChatGPT Pro Style Intelligence
+
+You are Cursor. Build a production-ready scaffold and harness for a knowledge-work agent that behaves like a research-grade assistant, not a single-pass chatbot. The goal is not to imitate any proprietary hidden chain-of-thought. The goal is to reproduce the external behavior that makes high-end research systems feel strong: deliberate planning, multi-step web research, source tracking, verification, iterative refinement, domain-specific reasoning, expert collaboration, high-fidelity deliverable generation, and disciplined final synthesis.
+
+This harness must not stop at “good reasoning.” It must reliably transform research into the exact kind of output the user asked for. If the user asks for a proposal, it should produce a strong proposal. If the user asks for an engineering report, it should produce an engineering report. If the user asks for an accounting spreadsheet, it should produce a structured spreadsheet-ready output with formulas, assumptions, reconciliation logic, and review notes. If the user asks for a cross-domain deliverable, the harness must assemble and coordinate multiple specialists.
+
+The standard of success is not merely “the model thought deeply.” The standard of success is:
+- the harness gathered the right domain knowledge
+- the harness used the right expert lenses
+- the harness matched the requested output type
+- the harness produced a deliverable that is useful, credible, and tailored to the user’s actual request
+- the harness can explain which sources it searched and how many it searched
+
+Non-negotiable outcomes:
+- The system must search the internet when the task requires fresh or niche information.
+- The system must report how many sources it searched.
+- The system must cite the sources it actually used for factual claims.
+- The system must iterate until it has either satisfied the task or can clearly explain what blocked completion.
+- The system must keep a concise visible reasoning summary and action log, but must not expose hidden chain-of-thought.
+- The system must generate an output package that conforms to the user’s requested deliverable type.
+- The system must support cross-domain collaboration between multiple expert agents when needed.
+- The system must distinguish between research completeness and deliverable readiness. A task is not done just because research is done.
+
+Before writing code, do a short research pass inside Cursor using the latest official docs that are available to you for:
+1. OpenAI reasoning models, agents, AGENTS.md, and research or deep-research style patterns
+2. Cursor rules, agent, terminal, cloud agent, CLI, skills, and subagents
+3. Anthropic agent architecture, multi-agent research, long-running harnesses, tool design, evaluator loops, and context engineering
+4. Any search provider docs you choose to support
+5. Any output-generation libraries you choose for markdown, docx, xlsx, csv, pdf, or structured artifact generation
+Then produce a short design memo in docs/design-research-notes.md summarizing:
+- the patterns you chose
+- why you chose them
+- how they support both deep reasoning and high-quality output generation
+- how cross-domain collaboration is handled
+- how output quality is evaluated before final delivery
+
+Core design philosophy:
+- Prefer simple, composable patterns over an overengineered framework.
+- Use an orchestrator plus specialists rather than one giant prompt.
+- Separate research from deliverable generation, but connect them with a strict evidence and requirements contract.
+- Treat output fidelity as a first-class concern, not an afterthought.
+- Use explicit completion criteria, citation rules, verification rules, formatting rules, and stop conditions.
+- Persist state so a long task can resume cleanly.
+- Optimize for correctness first, then usefulness, then cost and latency.
+- Keep the codebase model-provider agnostic.
+- Let specialists work in parallel, but require distilled handoff artifacts rather than raw context dumping.
+- Force every final deliverable to answer the user’s real ask, not just summarize the research.
+
+Primary product:
+Build a CLI-first research and deliverable harness that can later be used from Cursor chat, terminal, or cloud agent workflows.
+
+Name:
+- repo/app name: research-harness
+- CLI command: research-harness
+- optional shorthand: rh
+
+Recommended stack:
+- TypeScript
+- Node.js 20+
+- pnpm
+- zod for schemas
+- undici or native fetch
+- commander or yargs for CLI
+- pino for structured logs
+- vitest for tests
+- eslint + prettier
+- optional: playwright only if needed for hard pages later, but do not make it the default requirement
+- optional: sqlite or better-sqlite3 for durable local state
+- markdown output plus structured JSON output
+- optional: exceljs or xlsx for spreadsheet artifacts
+- optional: docx for Word-style deliverables
+- optional: a simple template engine for consistent output framing
+
+Do not lock the design to one model vendor.
+Implement provider adapters for:
+- OpenAI
+- Anthropic
+with a common interface so the harness can swap providers without changing orchestration logic.
+
+Implement search provider adapters behind a common interface.
+Support at least one real web search provider by default and make room for others.
+Suggested search adapters:
+- Brave Search
+- Tavily
+- Exa
+- SerpAPI
+Pick one default that is easy to wire up and document the env vars clearly.
+
+High-level behavior:
+The harness must operate as a stateful workflow with two intertwined tracks:
+1. Research track
+2. Deliverable track
+
+The research track gathers and validates knowledge.
+The deliverable track determines what the user actually wants produced, what “good” looks like for that artifact, and how multiple specialists should contribute.
+
+The system must not assume that one universal final-answer template is sufficient. It must derive an output contract from the task. The harness should be capable of producing, at minimum:
+- research reports
+- proposals
+- engineering memos
+- engineering reports
+- technical comparisons
+- accounting or finance analysis tables
+- spreadsheet-ready workbooks or workbook specs
+- business cases
+- client emails or executive summaries
+- multi-section deliverables where different parts require different expert lenses
+
+STAGE 0. TASK INTAKE
+- Parse the user task.
+- Extract objectives, constraints, desired output format, freshness needs, domains, audience, risk level, tone, granularity, and any explicit acceptance criteria.
+- Create a task record with a unique run ID.
+- Decide whether the task requires web research, file input, or both.
+- Decide whether the user wants a direct answer, a document, a spreadsheet, a presentation spec, a memo, a proposal, or a mixed artifact.
+- Produce an explicit definition of done.
+- Produce a must-answer question list.
+- Produce an output contract describing:
+  - deliverable type
+  - intended audience
+  - required sections or tabs
+  - required level of domain depth
+  - citation expectations
+  - whether formulas, tables, figures, assumptions, appendices, or executive summaries are required
+
+STAGE 1. DOMAIN ROUTING AND EXPERT ASSEMBLY
+- Detect which expertises are needed.
+- Assemble an expert panel from reusable domain agents.
+- Support both single-domain and cross-domain work.
+- Examples of expert panels:
+  - engineering + code compliance + utility coordination
+  - accounting + spreadsheet modeling + tax or policy lookup
+  - proposal writing + domain specialist + commercial reviewer
+  - business strategy + technical SME + executive communications editor
+- Each specialist must receive a sharply scoped brief.
+- Each specialist must return a distilled memo, not a raw chain-of-thought.
+- The orchestrator must reconcile specialist outputs into one coherent task plan.
+
+STAGE 2. PLANNING
+- Create a research plan with:
+  - key questions
+  - likely source categories
+  - search strategy
+  - fallback strategy
+  - verification strategy
+  - output-generation strategy
+  - collaboration plan among specialists
+  - stop conditions
+- Break the work into focused sub-questions.
+- Produce an evidence coverage matrix keyed to the must-answer questions.
+- Produce a deliverable coverage matrix keyed to the output contract.
+- Explicitly list which expert owns which section or concern.
+
+STAGE 3. SEARCH AND GATHER
+- Issue search queries.
+- Record every query.
+- Collect candidate results.
+- Normalize URLs.
+- Deduplicate by canonical URL and host.
+- Fetch pages.
+- Extract text content.
+- Save metadata:
+  - title
+  - url
+  - domain
+  - published or updated date if available
+  - retrieval timestamp
+  - query that found it
+  - status code
+  - content hash
+- Maintain these counters:
+  - search_queries_issued
+  - candidate_results_seen
+  - unique_sources_opened
+  - unique_domains_opened
+  - sources_cited_in_final
+The final answer must always include at least unique_sources_opened and sources_cited_in_final.
+
+STAGE 4. SOURCE TRIAGE
+- Score sources for relevance, authority, recency, uniqueness, and domain suitability.
+- Prefer primary and official sources when available.
+- Flag weak, duplicate, stale, or low-authority sources.
+- Identify conflicts between sources.
+- Promote sources into an evidence ledger only if they survive basic quality checks.
+- Tag sources by domain so the right specialists consume them.
+
+STAGE 5. REASONED EXTRACTION
+- Extract atomic claims, facts, dates, numbers, and quotations only as needed.
+- Store evidence snippets with source references.
+- Build a claim-to-evidence map.
+- Build a requirement-to-evidence map.
+- For each important claim, track:
+  - claim text
+  - confidence
+  - supporting sources
+  - contradiction sources
+  - freshness sensitivity
+  - owning specialist
+- Never let the final answer rely on unsupported claims.
+
+STAGE 6. DELIVERABLE DESIGN
+- Convert the output contract into an artifact plan.
+- Decide the best structure for the requested deliverable.
+- Define sections, tables, tabs, formulas, appendices, and formatting rules.
+- If the user request is under-specified, infer the minimum professional structure that best fits the artifact type while staying close to the user’s wording.
+- Examples:
+  - proposal: cover note, understanding, scope, assumptions, exclusions if needed, fee or optional placeholders, differentiators, next steps
+  - engineering report: purpose, background, observations, analysis, code or standard references, options, recommendations, limitations
+  - spreadsheet: assumptions tab, inputs tab, calculations tab, outputs tab, audit checks, formulas, notes, units, date stamps
+  - executive memo: issue, findings, implications, recommendation, concise support
+- Create a deliverable blueprint before drafting.
+
+STAGE 7. DRAFT GENERATION
+- Generate the deliverable using the evidence ledger and output contract.
+- The draft must match the requested artifact, not default back to a generic essay.
+- The draft must reflect audience and domain norms.
+- The draft must use specialist contributions where appropriate.
+- The draft must avoid unsupported filler.
+- The draft must clearly distinguish sourced facts from judgment, synthesis, or recommendations.
+- When helpful, produce both:
+  - a polished human-facing artifact
+  - a structured machine-facing representation for downstream rendering
+
+STAGE 8. VERIFICATION
+- Run a verifier pass that checks:
+  - every major claim has evidence
+  - time-sensitive claims are fresh enough
+  - conflicting claims are explicitly resolved or surfaced
+  - math and derived calculations are reproducible
+  - citations point to the correct source entries
+  - the artifact actually satisfies the requested output type
+  - the structure matches the output contract
+  - cross-domain dependencies are not internally inconsistent
+- If verification fails, send the task back to search, design, or synthesis as needed.
+
+STAGE 9. QUALITY REVIEW AND ITERATION
+- Run one or more reviewer agents depending on the artifact type.
+- Separate factual review from craft review.
+- Reviewer examples:
+  - factual verifier
+  - domain SME reviewer
+  - output-quality reviewer
+  - executive editor
+  - spreadsheet auditor
+  - commercial reviewer
+- Review questions should include:
+  - Did we actually answer the user’s request?
+  - Is the output high-quality for this artifact type?
+  - Is the tone right for the audience?
+  - Are there weak, vague, or generic sections?
+  - Are there unsupported recommendations?
+  - Are cross-domain sections coherent with each other?
+  - Does the spreadsheet logic reconcile?
+- If reviewers identify substantive gaps, loop back before finalizing.
+
+STAGE 10. SYNTHESIS AND FINAL PACKAGING
+- Produce the final artifact in clear, useful form.
+- Include citations inline or in a references section when appropriate.
+- Include a short method note.
+- Include research statistics.
+- Include uncertainty notes where evidence is incomplete or conflicting.
+- Include artifact metadata describing:
+  - output type
+  - expert agents used
+  - whether the result is complete, partial, or blocked
+- If the task requested a file-oriented artifact, emit the structured content needed to render it or generate the file if that path is implemented.
+
+STAGE 11. PERSIST AND RESUME
+- Save the plan, evidence ledger, source registry, deliverable blueprint, partial draft, reviewer feedback, stats, and next recommended actions.
+- Allow the next run to resume from saved state instead of restarting.
+
+Required agents or modules:
+1. Orchestrator
+   - owns the run
+   - manages stage transitions
+   - decides whether to search more, verify, redesign, synthesize, review, or stop
+2. Task Interpreter
+   - turns the user request into a definition of done and output contract
+3. Domain Router
+   - selects which expert agents are needed
+4. Planner
+   - turns task into plan and sub-questions
+5. Researcher
+   - issues searches, opens pages, extracts content
+6. Ranker or Triage
+   - scores and filters sources
+7. Specialist Agents
+   - reusable experts for fields such as engineering, accounting, finance, policy, proposal writing, spreadsheet modeling, business writing, and technical editing
+8. Deliverable Architect
+   - maps the request to the right artifact structure and section plan
+9. Synthesizer
+   - writes the answer or artifact from the evidence ledger and blueprint only
+10. Verifier
+   - checks evidence coverage, freshness, contradictions, calculations, and citation integrity
+11. Quality Reviewer or Critic
+   - performs evaluator-optimizer style critique on the draft and can request another research or drafting pass
+12. Spreadsheet Auditor
+   - validates workbook logic, formulas, unit consistency, assumptions, and reconciliation logic when spreadsheet outputs are involved
+13. Style and Audience Editor
+   - ensures the final language matches the requested audience and tone without distorting substance
+14. State Manager
+   - persists and restores runs, checkpoints, logs, counters, drafts, and review artifacts
+
+Minimal stopping logic:
+Do not stop just because one search pass finished.
+Do not stop just because one draft exists.
+Stop only when all of the following are true:
+- every must-answer question is either answered or explicitly marked unresolved
+- every load-bearing claim in the final deliverable has evidence
+- no unresolved high-severity contradictions remain
+- the verifier passes
+- the deliverable satisfies the output contract
+- the relevant quality reviewers pass or return only minor issues
+- either
+  - the evidence coverage threshold is met
+  - or another search round yields low marginal gain
+  - or another draft round yields low marginal gain
+Use a diminishing-returns rule, for example:
+- if the last N searches add no new high-value sources or no new supported claims, the orchestrator may stop research
+- if the last N review cycles produce only cosmetic edits, the orchestrator may stop drafting
+Make this configurable.
+
+Research-grade plus deliverable-grade loop:
+Implement a controlled loop:
+intake -> route experts -> plan -> search -> triage -> extract -> design deliverable -> draft -> verify -> review -> search or redraft again if needed -> final
+Add hard caps for:
+- total iterations
+- total source opens
+- total time
+- token budget if available
+When a cap is hit, finalize honestly with a partial-completion report.
+
+Source counting rules:
+Define “sources searched” precisely in code and docs.
+At minimum:
+- unique_sources_opened = unique fetched source URLs whose content retrieval was attempted
+Also track:
+- candidate_results_seen = total results returned by search APIs before filtering
+- sources_cited_in_final = count of unique source records cited by the final answer or artifact
+- specialist_panels_used = count of domain specialists activated for the run
+In the final answer, print a small research stats block such as:
+- Search queries issued: X
+- Candidate results seen: Y
+- Unique sources opened: Z
+- Unique domains opened: D
+- Sources cited in final answer: C
+- Specialist agents used: S
+
+Required output contract:
+Support both markdown and JSON output.
+Support structured artifact plans that can later be rendered to docx, xlsx, csv, md, or pdf.
+For markdown final answers, require these sections unless the artifact type overrides them:
+1. Deliverable
+2. Key findings or rationale
+3. Evidence and citations
+4. Uncertainty or conflicts
+5. Research stats
+
+For JSON output, use a schema similar to:
+{
+  "run_id": "string",
+  "status": "complete | partial | blocked",
+  "output_type": "answer | proposal | engineering_report | memo | spreadsheet_spec | mixed",
+  "answer": "string",
+  "deliverable_blueprint": {
+    "audience": "string",
+    "sections": ["string"],
+    "required_artifacts": ["string"]
+  },
+  "key_findings": [
+    {
+      "finding": "string",
+      "citations": ["source_id_1", "source_id_2"]
+    }
+  ],
+  "uncertainties": ["string"],
+  "research_stats": {
+    "search_queries_issued": 0,
+    "candidate_results_seen": 0,
+    "unique_sources_opened": 0,
+    "unique_domains_opened": 0,
+    "sources_cited_in_final": 0,
+    "specialist_panels_used": 0
+  },
+  "sources": [
+    {
+      "source_id": "string",
+      "title": "string",
+      "url": "string",
+      "domain": "string",
+      "published_at": "string | null",
+      "retrieved_at": "string",
+      "query": "string | null"
+    }
+  ]
+}
+
+Guardrails:
+- Do not fabricate citations.
+- Do not cite a source that was not actually retrieved or recorded.
+- Prefer official or primary sources for factual and technical claims.
+- Surface disagreement instead of flattening it.
+- If a claim is uncertain, label it uncertain.
+- Do not expose private chain-of-thought. Visible reasoning should be a concise progress summary only.
+- Keep irreversible actions out of scope unless explicitly enabled later.
+- Make network access optional via config, but when enabled, internet search must work end to end.
+- Never allow the synthesizer to introduce domain-specific claims that are not supported by the evidence ledger or explicitly marked as assumptions.
+- Never let elegant writing hide weak evidence.
+- Never let strong research excuse weak output structure.
+
+Repository structure to create:
+
+research-harness/
+  AGENTS.md
+  README.md
+  .env.example
+  package.json
+  pnpm-lock.yaml
+  tsconfig.json
+  vitest.config.ts
+  eslint.config.js
+  src/
+    cli.ts
+    config/
+      env.ts
+      defaults.ts
+    core/
+      types.ts
+      state.ts
+      run-store.ts
+      logger.ts
+      source-ledger.ts
+      evidence-ledger.ts
+      coverage-matrix.ts
+      deliverable-contract.ts
+      deliverable-blueprint.ts
+      citations.ts
+      stop-controller.ts
+      output-contract.ts
+    agents/
+      orchestrator.ts
+      task-interpreter.ts
+      domain-router.ts
+      planner.ts
+      researcher.ts
+      triage.ts
+      deliverable-architect.ts
+      synthesizer.ts
+      verifier.ts
+      critic.ts
+      specialists/
+        engineering.ts
+        accounting.ts
+        finance.ts
+        proposal-writer.ts
+        spreadsheet-modeler.ts
+        executive-editor.ts
+        technical-editor.ts
+    providers/
+      llm/
+        types.ts
+        openai.ts
+        anthropic.ts
+      search/
+        types.ts
+        brave.ts
+        tavily.ts
+      fetch/
+        http.ts
+        extract.ts
+      render/
+        markdown.ts
+        json.ts
+        docx.ts
+        xlsx.ts
+        csv.ts
+      storage/
+        sqlite.ts
+        file.ts
+    prompts/
+      orchestrator.md
+      task-interpreter.md
+      domain-router.md
+      planner.md
+      researcher.md
+      verifier.md
+      deliverable-architect.md
+      synthesizer.md
+      critic.md
+      specialists/
+        engineering.md
+        accounting.md
+        finance.md
+        proposal-writer.md
+        spreadsheet-modeler.md
+        executive-editor.md
+        technical-editor.md
+    utils/
+      url.ts
+      dates.ts
+      hashes.ts
+      retry.ts
+      text.ts
+      formulas.ts
+    schemas/
+      source.ts
+      claim.ts
+      deliverable.ts
+      final-report.ts
+  docs/
+    design-research-notes.md
+    architecture.md
+    evaluation-plan.md
+    implementation-report.md
+  examples/
+    example-task.md
+    example-output.md
+    example-proposal.md
+    example-engineering-report.md
+    example-spreadsheet-spec.json
+  tests/
+    unit/
+    integration/
+    fixtures/
+  evals/
+    tasks/
+    goldens/
+
+AGENTS.md requirements:
+Write a root AGENTS.md that tells Cursor and compatible coding agents:
+- what the project is
+- how to install and run it
+- how to run tests and evals
+- coding standards
+- rule that all externally stated claims in example outputs must map to recorded source IDs
+- rule that every change preserving the output contract must update tests if behavior changes
+- rule that no module may bypass the source ledger for fetched content
+- rule that the final answer must include source counts
+- rule that every task must begin with task interpretation and output-contract generation
+- rule that domain experts should be activated only when their expertise is relevant
+- rule that cross-domain tasks require an explicit reconciliation step before final delivery
+- rule that artifact quality review is mandatory before completion
+
+Implementation requirements:
+1. Make the orchestrator deterministic where possible
+   - explicit stage enum
+   - explicit transitions
+   - explicit stop reasons
+2. Use structured state
+   - do not pass around untyped blobs
+3. Separate prompts from runtime logic
+4. Make all provider integrations swappable
+5. Cache fetched pages by canonical URL and content hash
+6. Add retry and timeout handling
+7. Add rate-limit handling
+8. Add a clean event log stream for each run
+9. Make it easy to inspect runs after completion
+10. Include resume support by run ID
+11. Separate evidence objects from deliverable objects
+12. Preserve expert ownership tags for claims and sections
+13. Keep deliverable templates configurable rather than hardcoded to one house style
+14. Support machine-readable artifact specs so downstream tools can render files cleanly
+
+Model behavior requirements:
+- The orchestrator may use a stronger model than workers.
+- Worker prompts must be specialized and short.
+- The synthesizer must be forbidden from inventing facts outside the evidence ledger.
+- The deliverable architect must be forbidden from drifting away from the user’s requested artifact type.
+- The critic must assess:
+  - unanswered questions
+  - unsupported claims
+  - weak source mix
+  - stale evidence
+  - contradictions
+  - artifact mismatch
+  - vague writing
+  - poor audience fit
+  - weak cross-domain coherence
+- The verifier must be able to fail the run back into search or redraft.
+- Specialists must return structured memos with findings, risks, open questions, and recommended contributions.
+
+Prompting requirements:
+Use explicit prompt contracts.
+Every agent prompt should state:
+- role
+- allowed inputs
+- required outputs
+- forbidden behaviors
+- completion criteria
+For weaker or cheaper models, structure prompts with exact step order and exact output format.
+For specialist prompts, also state:
+- what expertise the specialist represents
+- what questions they own
+- what they must defer to other specialists
+- what assumptions they are allowed to make
+
+Search requirements:
+- Search the web with multiple query variants when the first pass is weak.
+- Track query lineage so you know which search yielded which source.
+- Prefer primary sources first for technical, legal, medical, or financial facts.
+- For time-sensitive questions, bias towards recent authoritative sources.
+- Add site restriction support.
+- Add domain allowlist and denylist support.
+- Add optional freshness windows.
+- Add per-domain caps so one domain does not dominate unless intentionally allowed.
+- Allow specialists to request targeted follow-up searches.
+
+Evidence requirements:
+Build an evidence ledger with atomic snippets.
+Each evidence record should include:
+- evidence_id
+- source_id
+- snippet or extracted statement
+- relevance score
+- claim tags
+- retrieval timestamp
+- freshness notes if applicable
+- owning specialist if applicable
+- allowed usage notes for downstream drafting
+
+Deliverable-generation requirements:
+Build a deliverable layer with artifact-aware generation.
+At minimum support:
+- markdown deliverables
+- structured JSON deliverables
+- spreadsheet specs with sheets, columns, formulas, assumptions, and audit checks
+- document specs with sections, headings, tables, citations, and appendices
+- optional rendering adapters for docx and xlsx
+Each deliverable blueprint should include:
+- artifact type
+- audience
+- section or sheet structure
+- required evidence anchors
+- stylistic constraints
+- numeric or formula requirements
+- review checklist
+
+CLI requirements:
+Implement commands like:
+- research-harness run --task "..." --format markdown
+- research-harness run --task-file ./examples/example-task.md --format json
+- research-harness resume --run-id <id>
+- research-harness inspect --run-id <id>
+- research-harness eval
+- research-harness doctor
+- research-harness render --run-id <id> --artifact markdown
+- research-harness render --run-id <id> --artifact xlsx
+The run command should print the final answer and the research stats block.
+The inspect command should show:
+- run status
+- sources searched
+- specialists used
+- deliverable type
+- unresolved questions
+- reviewer outcomes
+
+Config requirements:
+Support env vars for:
+- OPENAI_API_KEY
+- ANTHROPIC_API_KEY
+- BRAVE_API_KEY or chosen search provider keys
+- DEFAULT_MODEL_PROVIDER
+- DEFAULT_MODEL_NAME
+- DEFAULT_SEARCH_PROVIDER
+- MAX_ITERATIONS
+- MAX_SOURCE_OPENS
+- MAX_QUERY_ROUNDS
+- RUN_STORE_PATH
+- HTTP_TIMEOUT_MS
+- ENABLE_DOCX_RENDER
+- ENABLE_XLSX_RENDER
+- DEFAULT_OUTPUT_STYLE
+
+Documentation requirements:
+README.md must explain:
+- what this harness is
+- what it is not
+- quickstart
+- configuration
+- architecture
+- source counting rules
+- how resume works
+- how citations work
+- how output contracts work
+- how specialist routing works
+- how cross-domain collaboration works
+- how artifact rendering works
+- limitations
+- safety and honesty rules
+- how to add a new model provider
+- how to add a new search provider
+- how to add a new specialist
+- how to add a new artifact type
+
+Testing requirements:
+Write tests for:
+1. URL normalization and deduplication
+2. source counters
+3. citation integrity
+4. stop-controller behavior
+5. fallback when search returns nothing
+6. contradiction handling
+7. synthesizer refusal to use unsupported claims
+8. run resume
+9. JSON output schema validation
+10. markdown output includes research stats
+11. task interpreter produces correct output contracts
+12. domain router selects relevant specialists
+13. cross-domain reconciliation works
+14. proposal blueprint generation
+15. engineering report blueprint generation
+16. spreadsheet spec generation with formulas
+17. spreadsheet auditor catches broken references or inconsistent units
+18. quality reviewer flags artifact mismatch
+19. render adapters emit valid markdown and structured spreadsheet specs
+20. final output includes source counts and specialist counts
+
+Evaluation requirements:
+Create a small eval suite with at least 12 tasks across:
+- recent news
+- technical documentation lookup
+- multi-source comparison
+- vague question that requires query refinement
+- question with conflicting sources
+- time-sensitive fact
+- niche domain search
+- citation-heavy synthesis
+- partial-failure case
+- no-result case
+- proposal drafting grounded in researched facts
+- engineering report requiring domain-specific structure
+- accounting or finance spreadsheet specification
+- cross-domain deliverable requiring multiple expert agents
+For each eval, score:
+- correctness
+- citation validity
+- source diversity
+- completeness
+- deliverable fidelity
+- audience fit
+- domain depth
+- honesty under uncertainty
+- source count reporting
+- specialist selection quality
+Document the evaluation rubric in docs/evaluation-plan.md.
+
+Acceptance criteria:
+The scaffold is complete only if all of the following are true:
+- `pnpm install` works
+- `pnpm test` works
+- `pnpm build` works
+- `research-harness run --task "What changed recently in TypeScript releases?"` executes end to end when keys are configured
+- the final output includes source counts
+- the final output includes citations
+- the final output includes the deliverable type
+- the harness can resume a saved run
+- at least one integration test covers real or mocked web research
+- at least one integration test covers a proposal-style deliverable
+- at least one integration test covers a spreadsheet-style deliverable
+- example outputs are included
+- architecture and design docs are present
+- the system can activate multiple specialists and reconcile their outputs
+
+Build order:
+1. Initialize repo and tooling
+2. Create typed domain models and state machine
+3. Create task interpreter and deliverable contract types
+4. Create source and evidence ledger
+5. Create specialist registry and domain router
+6. Create search provider abstraction and one working provider
+7. Create fetch and extract pipeline
+8. Create agent prompts and orchestration loop
+9. Create deliverable architect and artifact blueprint system
+10. Create verifier, critic, and quality-review loop
+11. Create output formatter and render adapters
+12. Add persistence and resume
+13. Write tests
+14. Write evals
+15. Write docs
+16. Run the full test suite and fix failures
+17. Produce a final implementation report in docs/implementation-report.md
+
+Final delivery behavior:
+When finished, output:
+1. what you built
+2. the file tree
+3. how to run it
+4. which providers are wired
+5. which parts are scaffolded vs fully implemented
+6. which specialists exist
+7. which artifact types exist
+8. an example run summary showing source counts and specialist counts

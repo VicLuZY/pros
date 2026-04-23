@@ -1,0 +1,1035 @@
+CURSOR BUILD INSTRUCTION
+Research and Deliverable Harness for Research-Grade Knowledge Work
+
+You are Cursor. Build a production-ready scaffold and harness for a knowledge-work agent that behaves like a research-grade assistant, not a single-pass chatbot. The goal is not to imitate any proprietary hidden chain-of-thought. The goal is to reproduce the external behavior that makes high-end research systems feel strong: deliberate planning, multi-step web research, source tracking, evidence grading, applicability assessment, interdisciplinary collaboration, iterative refinement, domain-specific reasoning, and high-fidelity deliverable generation.
+
+This harness must not stop at “good reasoning.” It must reliably transform research into the exact kind of output the user asked for. If the user asks for a proposal, it should produce a strong proposal. If the user asks for an engineering report, it should produce an engineering report. If the user asks for an accounting spreadsheet, it should produce a structured spreadsheet-ready output with formulas, assumptions, reconciliation logic, controls, and review notes. If the user asks for a cross-domain deliverable, the harness must assemble and coordinate multiple specialists.
+
+The standard of success is not merely “the model thought deeply.” The standard of success is:
+- the harness gathered the right domain knowledge
+- the harness used the right evidence method for the task
+- the harness used the right expert lenses
+- the harness matched the requested output type and audience
+- the harness produced a deliverable that is useful, credible, well-structured, and tailored to the user’s actual request
+- the harness can explain which sources it searched, how many it searched, and why the final output should be trusted
+
+Non-negotiable outcomes:
+- The system must search the internet when the task requires fresh, niche, or current information.
+- The system must report how many sources it searched.
+- The system must cite the sources it actually used for factual claims.
+- The system must iterate until it has either satisfied the task or can clearly explain what blocked completion.
+- The system must keep a concise visible reasoning summary and action log, but must not expose hidden chain-of-thought.
+- The system must generate an output package that conforms to the user’s requested deliverable type.
+- The system must support cross-domain collaboration between multiple expert agents when needed.
+- The system must distinguish between research completeness and deliverable readiness. A task is not done just because research is done.
+- The system must make evidence quality and applicability explicit, not implicit.
+- The system must adapt its writing to the audience, not merely summarize sources.
+
+BEFORE WRITING CODE, DO A REAL RESEARCH PASS
+Before writing implementation code, do a short research pass inside Cursor using the latest official docs and foundational methods literature available to you for:
+1. OpenAI reasoning models, agents, AGENTS.md, and research or deep-research style patterns
+2. Cursor rules, agent, terminal, cloud agent, CLI, skills, and subagents
+3. Anthropic agent architecture, multi-agent research, long-running harnesses, tool design, evaluator loops, and context engineering
+4. Systematic review, scoping review, rapid review, and living review reporting or methods guidance
+5. Evidence grading and evidence-to-decision style methods
+6. Team science and interdisciplinary collaboration methods
+7. Technical report writing, executive summary, policy brief, and consulting-style document quality guidance
+8. Spreadsheet engineering, spreadsheet auditing, spreadsheet error reduction, and spreadsheet governance
+9. Any search provider docs you choose to support
+10. Any output-generation libraries you choose for markdown, docx, xlsx, csv, pdf, or structured artifact generation
+
+Then produce docs/design-research-notes.md summarizing:
+- the patterns you chose
+- why you chose them
+- how they support both deep reasoning and high-quality output generation
+- how they map to evidence synthesis, consulting-style delivery, technical writing, and spreadsheet engineering
+- how cross-domain collaboration is handled
+- how output quality is evaluated before final delivery
+- which methods are used for quantitative evidence, qualitative evidence, mixed evidence, and spreadsheet outputs
+- how the harness counts searched sources and cited sources
+
+Also produce docs/methodology-foundations.md with short sections for:
+- review types and when to use them
+- evidence grading logic
+- applicability and transferability assessment
+- interdisciplinary collaboration rules
+- document-quality rules by artifact type
+- spreadsheet-quality rules by artifact type
+
+Research-informed methodology to embed:
+- Use a PRISMA-like mindset for transparency of search, screening, inclusion, and versioning.
+- Use scoping-review style breadth when the task is exploratory and mapping-oriented.
+- Use rapid-review style shortcuts only when time or cost constraints justify them, and make those shortcuts explicit.
+- Use living-review style version tracking when the question is likely to change quickly or requires repeat refreshes.
+- Use GRADE-like logic for quantitative or claim-heavy evidence, rating confidence through dimensions such as directness, consistency, precision, risk of bias, and relevance.
+- Use CERQual-like logic for qualitative or interpretive findings, rating confidence through methodological limitations, coherence, adequacy, and relevance.
+- Use evidence-based management logic for business or consulting tasks, explicitly balancing rigor and contextual relevance rather than pretending that a statistically “strong” source is always decision-useful.
+- Use team-science logic for cross-domain tasks, including shared goals, explicit role boundaries, a common glossary, conflict handling, trust-building behavior, and a final reconciliation step.
+- Use technical-writing and policy-brief logic to ensure the final deliverable is audience-aware, concise where needed, decision-led, and not cluttered by unnecessary background.
+- Use spreadsheet-engineering logic so spreadsheet outputs are auditable, structured, versioned, tested, and not dependent on hidden hard-coded values.
+
+Core design philosophy:
+- Prefer simple, composable patterns over an overengineered framework.
+- Use an orchestrator plus specialists rather than one giant prompt.
+- Separate research from deliverable generation, but connect them with a strict evidence and requirements contract.
+- Treat output fidelity as a first-class concern, not an afterthought.
+- Treat evidence quality, recency, and applicability as first-class concerns, not afterthoughts.
+- Use explicit completion criteria, citation rules, verification rules, formatting rules, and stop conditions.
+- Persist state so a long task can resume cleanly.
+- Optimize for correctness first, then usefulness, then cost and latency.
+- Keep the codebase model-provider agnostic.
+- Let specialists work in parallel, but require distilled handoff artifacts rather than raw context dumping.
+- Force every final deliverable to answer the user’s real ask, not just summarize the research.
+- Force every output to clearly separate sourced findings, synthesis, assumptions, calculations, and recommendations.
+
+Primary product:
+Build a CLI-first research and deliverable harness that can later be used from Cursor chat, terminal, or cloud agent workflows.
+
+Name:
+- repo/app name: research-harness
+- CLI command: research-harness
+- optional shorthand: rh
+
+Recommended stack:
+- TypeScript
+- Node.js 20+
+- pnpm
+- zod for schemas
+- undici or native fetch
+- commander or yargs for CLI
+- pino for structured logs
+- vitest for tests
+- eslint + prettier
+- optional: playwright only if needed for hard pages later, but do not make it the default requirement
+- optional: sqlite or better-sqlite3 for durable local state
+- markdown output plus structured JSON output
+- optional: exceljs or xlsx for spreadsheet artifacts
+- optional: docx for Word-style deliverables
+- optional: a simple template engine for consistent output framing
+
+Do not lock the design to one model vendor.
+Implement provider adapters for:
+- OpenAI
+- Anthropic
+with a common interface so the harness can swap providers without changing orchestration logic.
+
+Implement search provider adapters behind a common interface.
+Support at least one real web search provider by default and make room for others.
+Suggested search adapters:
+- Brave Search
+- Tavily
+- Exa
+- SerpAPI
+Pick one default that is easy to wire up and document the env vars clearly.
+
+High-level behavior:
+The harness must operate as a stateful workflow with two intertwined tracks:
+1. Research track
+2. Deliverable track
+
+The research track gathers, grades, and validates knowledge.
+The deliverable track determines what the user actually wants produced, what “good” looks like for that artifact, and how multiple specialists should contribute.
+
+The system must not assume that one universal final-answer template is sufficient. It must derive an output contract from the task. The harness should be capable of producing, at minimum:
+- research reports
+- proposals
+- engineering memos
+- engineering reports
+- technical comparisons
+- accounting or finance analysis tables
+- spreadsheet-ready workbooks or workbook specs
+- business cases
+- client emails or executive summaries
+- policy briefs or decision briefs
+- multi-section deliverables where different parts require different expert lenses
+
+RESEARCH MODE SELECTION
+Every run must explicitly choose one research mode before major search work begins:
+- quick-answer mode: for narrow factual lookups with limited synthesis
+- scoped-research mode: for exploratory mapping, landscape scans, and unfamiliar domains
+- rapid-evidence-synthesis mode: for decision-oriented research on a short timeline
+- deep-synthesis mode: for higher-rigor, multi-source, high-stakes questions
+- living-research mode: for topics expected to change frequently or require repeat refresh
+
+The selected mode must control:
+- search breadth
+- screening rigor
+- evidence table depth
+- reviewer intensity
+- how confidence is reported
+- how change tracking works between versions
+
+STAGE 0. TASK INTAKE
+- Parse the user task.
+- Extract objectives, constraints, desired output format, freshness needs, domains, audience, risk level, tone, granularity, and any explicit acceptance criteria.
+- Create a task record with a unique run ID.
+- Decide whether the task requires web research, file input, or both.
+- Decide whether the user wants a direct answer, a document, a spreadsheet, a presentation spec, a memo, a proposal, or a mixed artifact.
+- Choose the research mode.
+- Produce an explicit definition of done.
+- Produce a must-answer question list.
+- Produce an output contract describing:
+  - deliverable type
+  - intended audience
+  - required sections or tabs
+  - required level of domain depth
+  - citation expectations
+  - whether formulas, tables, figures, assumptions, appendices, or executive summaries are required
+  - whether the artifact should optimize for decision speed, technical completeness, compliance defensibility, or operational usability
+- Produce an evidence protocol describing:
+  - inclusion criteria
+  - exclusion criteria
+  - preferred source hierarchy
+  - freshness threshold
+  - evidence-grading approach
+  - applicability or transferability rules
+
+STAGE 1. DOMAIN ROUTING AND EXPERT ASSEMBLY
+- Detect which expertises are needed.
+- Assemble an expert panel from reusable domain agents.
+- Support both single-domain and cross-domain work.
+- Examples of expert panels:
+  - engineering + code compliance + utility coordination
+  - accounting + spreadsheet modeling + tax or policy lookup
+  - proposal writing + domain specialist + commercial reviewer
+  - business strategy + technical SME + executive communications editor
+  - technical research + policy brief writer + visual summarizer
+- Each specialist must receive a sharply scoped brief.
+- Each specialist must return a distilled memo, not a raw chain-of-thought.
+- The orchestrator must reconcile specialist outputs into one coherent task plan.
+- For cross-domain tasks, create:
+  - a shared goals statement
+  - a shared glossary for potentially ambiguous terms
+  - an ownership map showing which specialist owns which questions
+  - an assumptions register
+  - a disagreement protocol for handling conflicts between specialists
+
+STAGE 2. PLANNING
+- Create a research plan with:
+  - key questions
+  - likely source categories
+  - search strategy
+  - fallback strategy
+  - verification strategy
+  - evidence-grading strategy
+  - applicability strategy
+  - output-generation strategy
+  - collaboration plan among specialists
+  - stop conditions
+- Break the work into focused sub-questions.
+- Produce an evidence coverage matrix keyed to the must-answer questions.
+- Produce a deliverable coverage matrix keyed to the output contract.
+- Explicitly list which expert owns which section or concern.
+- Produce a review protocol that states:
+  - what will be screened in or out
+  - what kinds of sources are considered primary, secondary, expert commentary, or operational guidance
+  - how contradictory evidence will be handled
+  - how quantitative and qualitative evidence will be combined
+
+STAGE 3. SEARCH AND GATHER
+- Issue search queries.
+- Record every query.
+- Collect candidate results.
+- Normalize URLs.
+- Deduplicate by canonical URL and host.
+- Fetch pages.
+- Extract text content.
+- Save metadata:
+  - title
+  - url
+  - domain
+  - author if available
+  - published or updated date if available
+  - retrieval timestamp
+  - query that found it
+  - status code
+  - content hash
+  - source type classification
+- Maintain these counters:
+  - search_queries_issued
+  - candidate_results_seen
+  - unique_sources_opened
+  - unique_domains_opened
+  - sources_screened_out
+  - sources_in_evidence_ledger
+  - sources_cited_in_final
+The final answer must always include at least unique_sources_opened and sources_cited_in_final.
+- Maintain a PRISMA-like source flow log with counts for identified, opened, excluded, retained, and cited sources.
+
+STAGE 4. SOURCE TRIAGE AND SCREENING
+- Score sources for relevance, authority, recency, uniqueness, and domain suitability.
+- Prefer primary and official sources when available.
+- Flag weak, duplicate, stale, or low-authority sources.
+- Identify conflicts between sources.
+- Record screening decisions and the reason for exclusion when a candidate is rejected.
+- Promote sources into an evidence ledger only if they survive basic quality checks.
+- Tag sources by domain so the right specialists consume them.
+- For exploratory tasks, allow broader inclusion but label lower-confidence or indirect sources explicitly.
+- For decision-heavy tasks, require a stricter source hierarchy and stronger applicability checks.
+
+STAGE 5. REASONED EXTRACTION AND EVIDENCE GRADING
+- Extract atomic claims, facts, dates, numbers, and quotations only as needed.
+- Store evidence snippets with source references.
+- Build a claim-to-evidence map.
+- Build a requirement-to-evidence map.
+- Build a finding-to-confidence map.
+- For each important claim, track:
+  - claim text
+  - confidence
+  - supporting sources
+  - contradiction sources
+  - freshness sensitivity
+  - directness or indirectness
+  - applicability notes
+  - owning specialist
+- Never let the final answer rely on unsupported claims.
+- For quantitative or fact-heavy claims, compute a GRADE-like confidence descriptor using dimensions such as:
+  - risk of bias
+  - directness
+  - consistency
+  - precision
+  - relevance to the user’s context
+- For qualitative or interpretive findings, compute a CERQual-like confidence descriptor using dimensions such as:
+  - methodological limitations
+  - coherence
+  - adequacy
+  - relevance
+- For business or management recommendations, explicitly rate evidence by:
+  - rigor
+  - contextual relevance
+  - operational usefulness
+  - consensus level
+- For each major recommendation, record:
+  - recommendation
+  - evidence basis
+  - assumptions
+  - tradeoffs
+  - applicability limits
+  - decision impact if wrong
+
+STAGE 6. DELIVERABLE DESIGN
+- Convert the output contract into an artifact plan.
+- Decide the best structure for the requested deliverable.
+- Define sections, tables, tabs, formulas, appendices, and formatting rules.
+- If the user request is under-specified, infer the minimum professional structure that best fits the artifact type while staying close to the user’s wording.
+- Ensure the structure reflects the audience.
+- Distinguish between executive summary and abstract when relevant.
+- Ensure the lead section answers “so what?” and not merely “what did we read?”
+- Examples:
+  - proposal: cover note, understanding, scope, assumptions, exclusions if needed, fee or optional placeholders, differentiators, next steps
+  - engineering report: purpose, background, observations, analysis, code or standard references, options, recommendations, limitations
+  - policy brief or decision memo: issue, why it matters, findings, options, implications, recommendation, implementation or risk notes
+  - spreadsheet: overview tab, assumptions tab, inputs tab, calculations tab, outputs tab, checks tab, version notes, formulas, units, date stamps
+  - executive memo: issue, findings, implications, recommendation, concise support
+- Create a deliverable blueprint before drafting.
+- The blueprint must state which sections are for executives, which are for technical readers, and which are appendices or audit support.
+
+ARTIFACT-SPECIFIC QUALITY RULES
+Proposal outputs must:
+- demonstrate understanding of the client problem
+- show a plausible approach without sounding bloated or generic
+- include domain-specific value, not template filler
+- distinguish assumptions, scope, and optional extras cleanly
+- include commercial and delivery realism
+
+Engineering reports must:
+- be logically structured and technically defensible
+- define symbols, units, and assumptions clearly
+- keep units consistent in tables and graphs
+- ensure figures and tables are explicitly referenced in the text
+- distinguish observed facts, calculations, engineering judgment, and recommendations
+- include a concise abstract or summary when appropriate
+
+Policy briefs and executive memos must:
+- target informed non-specialists when appropriate
+- use plain language while preserving correctness
+- focus on one issue per brief unless the user explicitly requests a broader landscape
+- connect findings to options, implications, feasibility, costs, and recommendations
+- make the main point visible in the first screen or first half-page
+
+Spreadsheet and accounting outputs must:
+- have a clear flow of inputs, processes, and outputs
+- enter each input once wherever feasible
+- avoid hard-coded constants inside formulas
+- keep formulas consistent across ranges
+- stage complex calculations through understandable intermediate steps
+- include automatic checks and reconciliation logic
+- include versioning, review notes, and protection assumptions
+- support peer review and downstream auditability
+
+STAGE 7. DRAFT GENERATION
+- Generate the deliverable using the evidence ledger and output contract.
+- The draft must match the requested artifact, not default back to a generic essay.
+- The draft must reflect audience and domain norms.
+- The draft must use specialist contributions where appropriate.
+- The draft must avoid unsupported filler.
+- The draft must clearly distinguish sourced facts from judgment, synthesis, assumptions, or recommendations.
+- When helpful, produce both:
+  - a polished human-facing artifact
+  - a structured machine-facing representation for downstream rendering
+- The drafting layer must be able to create:
+  - decision-led openings
+  - audience-appropriate summaries
+  - evidence tables
+  - assumptions tables
+  - recommendation matrices
+  - spreadsheet specifications with formulas and checks
+
+STAGE 8. VERIFICATION
+- Run a verifier pass that checks:
+  - every major claim has evidence
+  - time-sensitive claims are fresh enough
+  - conflicting claims are explicitly resolved or surfaced
+  - math and derived calculations are reproducible
+  - citations point to the correct source entries
+  - the artifact actually satisfies the requested output type
+  - the structure matches the output contract
+  - cross-domain dependencies are not internally inconsistent
+  - major recommendations are supported and bounded by assumptions
+  - tables, charts, figures, and spreadsheet outputs match the narrative text
+  - executive summaries and abstracts are aligned with the body and do not overclaim
+- If verification fails, send the task back to search, design, or synthesis as needed.
+
+STAGE 9. QUALITY REVIEW AND ITERATION
+- Run one or more reviewer agents depending on the artifact type.
+- Separate factual review from craft review.
+- Reviewer examples:
+  - factual verifier
+  - domain SME reviewer
+  - output-quality reviewer
+  - executive editor
+  - spreadsheet auditor
+  - commercial reviewer
+  - applicability reviewer
+  - cross-domain reconciliation reviewer
+- Review questions should include:
+  - Did we actually answer the user’s request?
+  - Did we choose the right research mode?
+  - Is the output high-quality for this artifact type?
+  - Is the tone right for the audience?
+  - Are there weak, vague, or generic sections?
+  - Are there unsupported recommendations?
+  - Are cross-domain sections coherent with each other?
+  - Does the spreadsheet logic reconcile?
+  - Are the confidence levels and limitations made clear enough?
+  - Are recommendations realistic for the user’s context?
+- If reviewers identify substantive gaps, loop back before finalizing.
+
+STAGE 10. SYNTHESIS AND FINAL PACKAGING
+- Produce the final artifact in clear, useful form.
+- Include citations inline or in a references section when appropriate.
+- Include a short method note.
+- Include research statistics.
+- Include uncertainty notes where evidence is incomplete or conflicting.
+- Include artifact metadata describing:
+  - output type
+  - research mode used
+  - expert agents used
+  - whether the result is complete, partial, or blocked
+  - evidence confidence posture
+- If the task requested a file-oriented artifact, emit the structured content needed to render it or generate the file if that path is implemented.
+- Include a short “decision confidence” summary for recommendation-heavy outputs.
+
+STAGE 11. PERSIST AND RESUME
+- Save the plan, evidence protocol, evidence ledger, source registry, deliverable blueprint, partial draft, reviewer feedback, stats, and next recommended actions.
+- Save a change log between iterations so living or repeated runs can report what changed.
+- Allow the next run to resume from saved state instead of restarting.
+
+Required agents or modules:
+1. Orchestrator
+   - owns the run
+   - manages stage transitions
+   - decides whether to search more, verify, redesign, synthesize, review, or stop
+2. Task Interpreter
+   - turns the user request into a definition of done and output contract
+3. Method Selector
+   - selects the research mode and evidence method
+4. Domain Router
+   - selects which expert agents are needed
+5. Planner
+   - turns task into plan and sub-questions
+6. Researcher
+   - issues searches, opens pages, extracts content
+7. Ranker or Triage
+   - scores and filters sources
+8. Evidence Grader
+   - scores confidence, directness, relevance, and applicability
+9. Specialist Agents
+   - reusable experts for fields such as engineering, accounting, finance, policy, proposal writing, spreadsheet modeling, business writing, and technical editing
+10. Deliverable Architect
+   - maps the request to the right artifact structure and section plan
+11. Synthesizer
+   - writes the answer or artifact from the evidence ledger and blueprint only
+12. Verifier
+   - checks evidence coverage, freshness, contradictions, calculations, and citation integrity
+13. Quality Reviewer or Critic
+   - performs evaluator-optimizer style critique on the draft and can request another research or drafting pass
+14. Spreadsheet Auditor
+   - validates workbook logic, formulas, unit consistency, assumptions, and reconciliation logic when spreadsheet outputs are involved
+15. Style and Audience Editor
+   - ensures the final language matches the requested audience and tone without distorting substance
+16. Reconciliation Reviewer
+   - resolves cross-domain conflicts and ensures the final story is coherent
+17. State Manager
+   - persists and restores runs, checkpoints, logs, counters, drafts, and review artifacts
+
+Minimal stopping logic:
+Do not stop just because one search pass finished.
+Do not stop just because one draft exists.
+Stop only when all of the following are true:
+- every must-answer question is either answered or explicitly marked unresolved
+- every load-bearing claim in the final deliverable has evidence
+- no unresolved high-severity contradictions remain
+- the verifier passes
+- the deliverable satisfies the output contract
+- the relevant quality reviewers pass or return only minor issues
+- the evidence confidence for the main recommendations is acceptable for the task class
+- either
+  - the evidence coverage threshold is met
+  - or another search round yields low marginal gain
+  - or another draft round yields low marginal gain
+Use a diminishing-returns rule, for example:
+- if the last N searches add no new high-value sources or no new supported claims, the orchestrator may stop research
+- if the last N review cycles produce only cosmetic edits, the orchestrator may stop drafting
+Make this configurable.
+
+Research-grade plus deliverable-grade loop:
+Implement a controlled loop:
+intake -> select method -> route experts -> plan -> search -> triage -> grade evidence -> design deliverable -> draft -> verify -> review -> search or redraft again if needed -> final
+Add hard caps for:
+- total iterations
+- total source opens
+- total time
+- token budget if available
+When a cap is hit, finalize honestly with a partial-completion report.
+
+Source counting rules:
+Define “sources searched” precisely in code and docs.
+At minimum:
+- unique_sources_opened = unique fetched source URLs whose content retrieval was attempted
+Also track:
+- candidate_results_seen = total results returned by search APIs before filtering
+- sources_screened_out = unique source records excluded after triage
+- sources_in_evidence_ledger = unique source records retained after screening
+- sources_cited_in_final = count of unique source records cited by the final answer or artifact
+- specialist_panels_used = count of domain specialists activated for the run
+In the final answer, print a small research stats block such as:
+- Research mode: X
+- Search queries issued: X
+- Candidate results seen: Y
+- Unique sources opened: Z
+- Sources screened out: E
+- Sources retained in evidence ledger: R
+- Unique domains opened: D
+- Sources cited in final answer: C
+- Specialist agents used: S
+
+Required output contract:
+Support both markdown and JSON output.
+Support structured artifact plans that can later be rendered to docx, xlsx, csv, md, or pdf.
+For markdown final answers, require these sections unless the artifact type overrides them:
+1. Deliverable
+2. Key findings or rationale
+3. Evidence and citations
+4. Uncertainty or conflicts
+5. Research stats
+
+For JSON output, use a schema similar to:
+{
+  "run_id": "string",
+  "status": "complete | partial | blocked",
+  "research_mode": "quick_answer | scoped_research | rapid_evidence_synthesis | deep_synthesis | living_research",
+  "output_type": "answer | proposal | engineering_report | memo | policy_brief | spreadsheet_spec | mixed",
+  "answer": "string",
+  "deliverable_blueprint": {
+    "audience": "string",
+    "sections": ["string"],
+    "required_artifacts": ["string"]
+  },
+  "key_findings": [
+    {
+      "finding": "string",
+      "citations": ["source_id_1", "source_id_2"],
+      "confidence": "high | moderate | low | very_low"
+    }
+  ],
+  "recommendations": [
+    {
+      "recommendation": "string",
+      "basis": ["source_id_1"],
+      "assumptions": ["string"],
+      "limitations": ["string"]
+    }
+  ],
+  "uncertainties": ["string"],
+  "research_stats": {
+    "search_queries_issued": 0,
+    "candidate_results_seen": 0,
+    "unique_sources_opened": 0,
+    "sources_screened_out": 0,
+    "sources_in_evidence_ledger": 0,
+    "unique_domains_opened": 0,
+    "sources_cited_in_final": 0,
+    "specialist_panels_used": 0
+  },
+  "sources": [
+    {
+      "source_id": "string",
+      "title": "string",
+      "url": "string",
+      "domain": "string",
+      "published_at": "string | null",
+      "retrieved_at": "string",
+      "query": "string | null",
+      "screening_status": "retained | excluded | cited",
+      "source_type": "primary | secondary | commentary | operational_guidance"
+    }
+  ]
+}
+
+Guardrails:
+- Do not fabricate citations.
+- Do not cite a source that was not actually retrieved or recorded.
+- Prefer official or primary sources for factual and technical claims.
+- Surface disagreement instead of flattening it.
+- If a claim is uncertain, label it uncertain.
+- Do not expose private chain-of-thought. Visible reasoning should be a concise progress summary only.
+- Keep irreversible actions out of scope unless explicitly enabled later.
+- Make network access optional via config, but when enabled, internet search must work end to end.
+- Never allow the synthesizer to introduce domain-specific claims that are not supported by the evidence ledger or explicitly marked as assumptions.
+- Never let elegant writing hide weak evidence.
+- Never let strong research excuse weak output structure.
+- Never let a technically correct answer ignore the actual audience.
+- Never let a recommendation appear without a clear basis, assumptions, and limitations.
+- Never let spreadsheet outputs ship without checks, review notes, and auditability.
+
+Repository structure to create:
+
+research-harness/
+  AGENTS.md
+  README.md
+  .env.example
+  package.json
+  pnpm-lock.yaml
+  tsconfig.json
+  vitest.config.ts
+  eslint.config.js
+  src/
+    cli.ts
+    config/
+      env.ts
+      defaults.ts
+    core/
+      types.ts
+      state.ts
+      run-store.ts
+      logger.ts
+      source-ledger.ts
+      evidence-ledger.ts
+      evidence-grading.ts
+      coverage-matrix.ts
+      deliverable-contract.ts
+      deliverable-blueprint.ts
+      citations.ts
+      stop-controller.ts
+      output-contract.ts
+      source-flow.ts
+      glossary.ts
+      assumptions-register.ts
+    agents/
+      orchestrator.ts
+      task-interpreter.ts
+      method-selector.ts
+      domain-router.ts
+      planner.ts
+      researcher.ts
+      triage.ts
+      evidence-grader.ts
+      deliverable-architect.ts
+      synthesizer.ts
+      verifier.ts
+      critic.ts
+      reconciliation-reviewer.ts
+      specialists/
+        engineering.ts
+        accounting.ts
+        finance.ts
+        policy.ts
+        proposal-writer.ts
+        spreadsheet-modeler.ts
+        executive-editor.ts
+        technical-editor.ts
+    providers/
+      llm/
+        types.ts
+        openai.ts
+        anthropic.ts
+      search/
+        types.ts
+        brave.ts
+        tavily.ts
+      fetch/
+        http.ts
+        extract.ts
+      render/
+        markdown.ts
+        json.ts
+        docx.ts
+        xlsx.ts
+        csv.ts
+      storage/
+        sqlite.ts
+        file.ts
+    prompts/
+      orchestrator.md
+      task-interpreter.md
+      method-selector.md
+      domain-router.md
+      planner.md
+      researcher.md
+      evidence-grader.md
+      verifier.md
+      deliverable-architect.md
+      synthesizer.md
+      critic.md
+      reconciliation-reviewer.md
+      specialists/
+        engineering.md
+        accounting.md
+        finance.md
+        policy.md
+        proposal-writer.md
+        spreadsheet-modeler.md
+        executive-editor.md
+        technical-editor.md
+    utils/
+      url.ts
+      dates.ts
+      hashes.ts
+      retry.ts
+      text.ts
+      formulas.ts
+      source-hierarchy.ts
+    schemas/
+      source.ts
+      claim.ts
+      evidence.ts
+      deliverable.ts
+      final-report.ts
+  docs/
+    design-research-notes.md
+    methodology-foundations.md
+    architecture.md
+    evaluation-plan.md
+    implementation-report.md
+  examples/
+    example-task.md
+    example-output.md
+    example-proposal.md
+    example-engineering-report.md
+    example-policy-brief.md
+    example-spreadsheet-spec.json
+  tests/
+    unit/
+    integration/
+    fixtures/
+  evals/
+    tasks/
+    goldens/
+
+AGENTS.md requirements:
+Write a root AGENTS.md that tells Cursor and compatible coding agents:
+- what the project is
+- how to install and run it
+- how to run tests and evals
+- coding standards
+- rule that all externally stated claims in example outputs must map to recorded source IDs
+- rule that every change preserving the output contract must update tests if behavior changes
+- rule that no module may bypass the source ledger for fetched content
+- rule that the final answer must include source counts
+- rule that every task must begin with task interpretation, research-mode selection, and output-contract generation
+- rule that domain experts should be activated only when their expertise is relevant
+- rule that cross-domain tasks require an explicit reconciliation step before final delivery
+- rule that artifact quality review is mandatory before completion
+- rule that research shortcuts must be disclosed in method notes
+- rule that spreadsheet artifacts must include checks and version notes
+
+Implementation requirements:
+1. Make the orchestrator deterministic where possible
+   - explicit stage enum
+   - explicit transitions
+   - explicit stop reasons
+2. Use structured state
+   - do not pass around untyped blobs
+3. Separate prompts from runtime logic
+4. Make all provider integrations swappable
+5. Cache fetched pages by canonical URL and content hash
+6. Add retry and timeout handling
+7. Add rate-limit handling
+8. Add a clean event log stream for each run
+9. Make it easy to inspect runs after completion
+10. Include resume support by run ID
+11. Separate evidence objects from deliverable objects
+12. Preserve expert ownership tags for claims and sections
+13. Keep deliverable templates configurable rather than hardcoded to one house style
+14. Support machine-readable artifact specs so downstream tools can render files cleanly
+15. Support PRISMA-like source flow reporting
+16. Support confidence grading and applicability notes per major finding
+17. Support cross-domain glossaries and assumptions registers
+
+Model behavior requirements:
+- The orchestrator may use a stronger model than workers.
+- Worker prompts must be specialized and short.
+- The synthesizer must be forbidden from inventing facts outside the evidence ledger.
+- The deliverable architect must be forbidden from drifting away from the user’s requested artifact type.
+- The critic must assess:
+  - unanswered questions
+  - unsupported claims
+  - weak source mix
+  - stale evidence
+  - contradictions
+  - artifact mismatch
+  - vague writing
+  - poor audience fit
+  - weak cross-domain coherence
+  - hidden assumptions
+  - poor decision usefulness
+- The verifier must be able to fail the run back into search or redraft.
+- Specialists must return structured memos with findings, risks, open questions, confidence levels, and recommended contributions.
+
+Prompting requirements:
+Use explicit prompt contracts.
+Every agent prompt should state:
+- role
+- allowed inputs
+- required outputs
+- forbidden behaviors
+- completion criteria
+For weaker or cheaper models, structure prompts with exact step order and exact output format.
+For specialist prompts, also state:
+- what expertise the specialist represents
+- what questions they own
+- what they must defer to other specialists
+- what assumptions they are allowed to make
+- what evidence standard they should apply
+- who their audience is
+
+Search requirements:
+- Search the web with multiple query variants when the first pass is weak.
+- Track query lineage so you know which search yielded which source.
+- Prefer primary sources first for technical, legal, medical, or financial facts.
+- For time-sensitive questions, bias towards recent authoritative sources.
+- Add site restriction support.
+- Add domain allowlist and denylist support.
+- Add optional freshness windows.
+- Add per-domain caps so one domain does not dominate unless intentionally allowed.
+- Allow specialists to request targeted follow-up searches.
+- Support broad exploratory scans followed by focused confirmatory searches.
+
+Evidence requirements:
+Build an evidence ledger with atomic snippets.
+Each evidence record should include:
+- evidence_id
+- source_id
+- snippet or extracted statement
+- relevance score
+- claim tags
+- retrieval timestamp
+- freshness notes if applicable
+- directness notes
+- applicability notes
+- confidence notes
+- owning specialist if applicable
+- allowed usage notes for downstream drafting
+
+Deliverable-generation requirements:
+Build a deliverable layer with artifact-aware generation.
+At minimum support:
+- markdown deliverables
+- structured JSON deliverables
+- spreadsheet specs with sheets, columns, formulas, assumptions, checks, and reconciliation notes
+- document specs with sections, headings, tables, citations, appendices, and audience notes
+- optional rendering adapters for docx and xlsx
+Each deliverable blueprint should include:
+- artifact type
+- audience
+- section or sheet structure
+- required evidence anchors
+- stylistic constraints
+- numeric or formula requirements
+- review checklist
+- confidence communication strategy
+
+CLI requirements:
+Implement commands like:
+- research-harness run --task "..." --format markdown
+- research-harness run --task-file ./examples/example-task.md --format json
+- research-harness resume --run-id <id>
+- research-harness inspect --run-id <id>
+- research-harness eval
+- research-harness doctor
+- research-harness render --run-id <id> --artifact markdown
+- research-harness render --run-id <id> --artifact xlsx
+The run command should print the final answer and the research stats block.
+The inspect command should show:
+- run status
+- research mode
+- sources searched
+- specialists used
+- deliverable type
+- unresolved questions
+- reviewer outcomes
+- key assumptions
+- confidence posture
+
+Config requirements:
+Support env vars for:
+- OPENAI_API_KEY
+- ANTHROPIC_API_KEY
+- BRAVE_API_KEY or chosen search provider keys
+- DEFAULT_MODEL_PROVIDER
+- DEFAULT_MODEL_NAME
+- DEFAULT_SEARCH_PROVIDER
+- MAX_ITERATIONS
+- MAX_SOURCE_OPENS
+- MAX_QUERY_ROUNDS
+- RUN_STORE_PATH
+- HTTP_TIMEOUT_MS
+- ENABLE_DOCX_RENDER
+- ENABLE_XLSX_RENDER
+- DEFAULT_OUTPUT_STYLE
+
+Documentation requirements:
+README.md must explain:
+- what this harness is
+- what it is not
+- quickstart
+- configuration
+- architecture
+- source counting rules
+- source flow reporting rules
+- how resume works
+- how citations work
+- how output contracts work
+- how specialist routing works
+- how research modes work
+- how evidence grading works
+- how cross-domain collaboration works
+- how artifact rendering works
+- limitations
+- safety and honesty rules
+- how to add a new model provider
+- how to add a new search provider
+- how to add a new specialist
+- how to add a new artifact type
+
+Testing requirements:
+Write tests for:
+1. URL normalization and deduplication
+2. source counters
+3. source-flow counters
+4. citation integrity
+5. stop-controller behavior
+6. fallback when search returns nothing
+7. contradiction handling
+8. synthesizer refusal to use unsupported claims
+9. run resume
+10. JSON output schema validation
+11. markdown output includes research stats
+12. task interpreter produces correct output contracts
+13. method selector chooses the right research mode
+14. domain router selects relevant specialists
+15. cross-domain reconciliation works
+16. proposal blueprint generation
+17. engineering report blueprint generation
+18. policy brief blueprint generation
+19. spreadsheet spec generation with formulas and checks
+20. spreadsheet auditor catches broken references, missing controls, hard-coded constants, or inconsistent units
+21. quality reviewer flags artifact mismatch
+22. render adapters emit valid markdown and structured spreadsheet specs
+23. final output includes source counts and specialist counts
+24. confidence grader attaches confidence notes to major findings
+
+Evaluation requirements:
+Create a small eval suite with at least 14 tasks across:
+- recent news
+- technical documentation lookup
+- multi-source comparison
+- vague question that requires query refinement
+- question with conflicting sources
+- time-sensitive fact
+- niche domain search
+- citation-heavy synthesis
+- partial-failure case
+- no-result case
+- proposal drafting grounded in researched facts
+- engineering report requiring domain-specific structure
+- policy brief or executive memo for a non-specialist audience
+- accounting or finance spreadsheet specification
+- cross-domain deliverable requiring multiple expert agents
+For each eval, score:
+- correctness
+- citation validity
+- source diversity
+- completeness
+- deliverable fidelity
+- audience fit
+- domain depth
+- honesty under uncertainty
+- source count reporting
+- specialist selection quality
+- confidence communication quality
+- cross-domain reconciliation quality
+Document the evaluation rubric in docs/evaluation-plan.md.
+
+Acceptance criteria:
+The scaffold is complete only if all of the following are true:
+- `pnpm install` works
+- `pnpm test` works
+- `pnpm build` works
+- `research-harness run --task "What changed recently in TypeScript releases?"` executes end to end when keys are configured
+- the final output includes source counts
+- the final output includes citations
+- the final output includes the deliverable type
+- the final output includes the research mode
+- the final output includes a method note
+- the harness can resume a saved run
+- at least one integration test covers real or mocked web research
+- at least one integration test covers a proposal-style deliverable
+- at least one integration test covers a policy-brief-style deliverable
+- at least one integration test covers a spreadsheet-style deliverable
+- example outputs are included
+- architecture and design docs are present
+- the system can activate multiple specialists and reconcile their outputs
+
+Build order:
+1. Initialize repo and tooling
+2. Create typed domain models and state machine
+3. Create task interpreter, method selector, and deliverable contract types
+4. Create source ledger, source flow, and evidence ledger
+5. Create evidence grading and applicability logic
+6. Create specialist registry and domain router
+7. Create search provider abstraction and one working provider
+8. Create fetch and extract pipeline
+9. Create agent prompts and orchestration loop
+10. Create deliverable architect and artifact blueprint system
+11. Create verifier, critic, reconciliation reviewer, and quality-review loop
+12. Create output formatter and render adapters
+13. Add persistence and resume
+14. Write tests
+15. Write evals
+16. Write docs
+17. Run the full test suite and fix failures
+18. Produce a final implementation report in docs/implementation-report.md
+
+Final delivery behavior:
+When finished, output:
+1. what you built
+2. the file tree
+3. how to run it
+4. which providers are wired
+5. which parts are scaffolded vs fully implemented
+6. which specialists exist
+7. which research modes exist
+8. which artifact types exist
+9. an example run summary showing source counts, confidence posture, and specialist counts
